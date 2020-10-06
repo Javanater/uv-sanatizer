@@ -20,8 +20,122 @@
 
 #include <Arduino.h>
 
+struct debounce_task_t
+{
+  enum state_t { INACTIVE, DEBOUCE_INACTIVE, ACTIVE, DEBOUCE_ACTIVE };
+  using active_t = decltype(HIGH);
+  using mode_t = decltype(INPUT_PULLUP);
+
+  explicit debounce_task_t(long long debounce_time_)
+    : debounce_time(debounce_time_)
+  {}
+
+  bool operator()(bool active, unsigned long current_time)
+  {
+    switch (state) {
+    case INACTIVE:
+      if (active) {
+        last_transition_time = current_time;
+        state = DEBOUCE_INACTIVE;
+      }
+      break;
+
+    case DEBOUCE_INACTIVE:
+      if (!active) {
+        state = INACTIVE;
+      } else if (current_time - last_transition_time >= debounce_time) {
+        state = ACTIVE;
+      }
+      break;
+
+    case ACTIVE:
+      if (!active) {
+        last_transition_time = current_time;
+        state = DEBOUCE_ACTIVE;
+      }
+      break;
+
+    case DEBOUCE_ACTIVE:
+      if (active) {
+        state = ACTIVE;
+      } else if (current_time - last_transition_time >= debounce_time) {
+        state = INACTIVE;
+      }
+      break;
+    }
+
+    return state == ACTIVE || state == DEBOUCE_ACTIVE;
+  }
+
+private:
+  state_t state{ INACTIVE };
+  long long const debounce_time;
+  long long last_transition_time{ 0 };
+};
+
+struct sanatize_task_t
+{
+  enum state_t {
+    IDLE,
+    IDLE_WAIT_FOR_RELEASE,
+    SANATIZE,
+    CANCEL_WAIT_FOR_RELEASE,
+    COOL_DOWN
+  };
+
+  sanatize_task_t(long long const sanatize_time_,
+    long long const cool_down_time_)
+    : sanatize_time(sanatize_time_), cool_down_time(cool_down_time_)
+  {}
+
+  bool operator()(bool input, unsigned long current_time)
+  {
+    switch (state) {
+    case IDLE:
+      if (input) { state = IDLE_WAIT_FOR_RELEASE; }
+      break;
+
+    case IDLE_WAIT_FOR_RELEASE:
+      if (!input) {
+        state = SANATIZE;
+        sanatize_start_time = current_time;
+      }
+      break;
+
+    case SANATIZE:
+      if (input) {
+        state = CANCEL_WAIT_FOR_RELEASE;
+      } else if (current_time - sanatize_start_time >= sanatize_time) {
+        state = CANCEL_WAIT_FOR_RELEASE;
+      }
+      break;
+
+    case CANCEL_WAIT_FOR_RELEASE:
+      if (!input) {
+        state = COOL_DOWN;
+        sanatize_start_time = current_time;
+      }
+      break;
+
+    case COOL_DOWN:
+      if (current_time - sanatize_start_time >= cool_down_time) {
+        state = IDLE;
+      }
+      break;
+    }
+
+    return state == SANATIZE;
+  }
+
+private:
+  state_t state{ IDLE };
+  long long const sanatize_time;
+  long long const cool_down_time;
+  long long sanatize_start_time{ 0 };
+};
+
 // this sets the number of seconds the UV tubes will be on for a sanitize cycle
-const auto CookTime = 210;
+const auto CookTime = 210000;
 
 // this goes high to power relay to turn on UV tubes
 const auto UV = 2;
@@ -48,64 +162,8 @@ const auto cook_sample_delay = 1000 / 10;
 const auto sanatize_delay = 1000;
 const auto power_on_delay = 1000;
 
-void lightOn() { digitalWrite(LED, HIGH); }
-
-void lightOff() { digitalWrite(LED, LOW); }
-
-void blink()
-{
-  for (int i = 0; i < blink_count; i++) {
-    lightOn();
-    delay(flash_delay);
-    lightOff();
-    delay(flash_delay);
-  }
-}
-
-void powerOn()
-{
-  for (int i = 0; i < power_on_blink_count; i++) {
-    lightOn();
-    delay(flash_delay);
-    lightOff();
-    delay(flash_delay);
-  }
-}
-
-void waitPress()
-{
-  while (digitalRead(Push) == HIGH) {}
-  delay(debounce_delay);
-  while (digitalRead(Push) == LOW) {}
-}
-
-void UVon() { digitalWrite(UV, HIGH); }
-
-void UVoff() { digitalWrite(UV, LOW); }
-
-int Sanitize()
-{
-  UVon();
-  lightOn();
-  delay(sanatize_delay);
-
-  for (int i = 0; i < CookTime; i++) {
-    for (int j = 0; j < cook_sample_frequency; j++) {
-      if (digitalRead(Push) == LOW) {
-        UVoff();
-        lightOff();
-        delay(cancel_lockout_time);
-        blink();
-        return 1;
-      }
-
-      delay(cook_sample_delay);
-    }
-  }
-
-  UVoff();
-  lightOff();
-}
+debounce_task_t debounce{ debounce_delay };
+sanatize_task_t sanatize{ CookTime, cancel_lockout_time };
 
 void setup()
 {
@@ -115,15 +173,19 @@ void setup()
   pinMode(Push, INPUT_PULLUP);
   pinMode(Push_Low, OUTPUT);
   digitalWrite(UV, LOW);
-  digitalWrite(UV, LOW);
   digitalWrite(LED_Cathode, LOW);
   digitalWrite(Push_Low, LOW);
-  delay(power_on_delay);
-  powerOn();
 }
+
+bool read_button() { return digitalRead(Push) == HIGH; }
+
+void set_uv(bool active) { digitalWrite(UV, active ? HIGH : LOW); }
 
 void loop()
 {
-  waitPress();
-  Sanitize();
+  auto current_time = millis();
+  bool button_state = read_button();
+  bool debounced_button_state = debounce(button_state, current_time);
+  bool uv_active = sanatize(debounced_button_state, current_time);
+  set_uv(uv_active);
 }
