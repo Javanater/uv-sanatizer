@@ -4,7 +4,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 project(uv-sanatizer)
 
-add_executable(uv-sanatizer uv-sanatizer.cpp)
+add_executable(uv-sanatizer uv-sanatizer.cpp debounce_task.cpp sanatize_task.cpp)
 
 target_link_arduino_libraries(uv-sanatizer PRIVATE core)
 target_enable_arduino_upload(uv-sanatizer)
