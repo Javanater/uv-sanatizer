@@ -22,6 +22,8 @@
 #include "debounce_task.hpp"
 #include "sanatize_task.hpp"
 
+#define DEBUG
+
 // this sets the number of seconds the UV tubes will be on for a sanitize cycle
 const auto CookTime = 210000;
 
@@ -43,7 +45,7 @@ const auto Push_Low = 6;
 const auto flash_delay = 50;
 const auto blink_count = 10;
 const auto power_on_blink_count = 3;
-const auto debounce_delay = 5;
+const auto debounce_delay = 100;
 const auto cancel_lockout_time = 5000;
 const auto cook_sample_frequency = 10;
 const auto cook_sample_delay = 1000 / 10;
@@ -53,8 +55,77 @@ const auto power_on_delay = 1000;
 debounce_task_t debounce{ debounce_delay };
 sanatize_task_t sanatize{ CookTime, cancel_lockout_time };
 
+void error_state();
+bool check_initial_conditions();
+
+#ifdef DEBUG
+template<class T> void println(T t) { Serial.println(t); }
+
+template<> void println<sanatize_task_t::state_t>(sanatize_task_t::state_t t)
+{
+  switch (t) {
+  case sanatize_task_t::IDLE:
+    Serial.println("IDLE");
+    break;
+
+  case sanatize_task_t::IDLE_WAIT_FOR_RELEASE:
+    Serial.println("IDLE_WAIT_FOR_RELEASE");
+    break;
+
+  case sanatize_task_t::SANATIZE:
+    Serial.println("SANATIZE");
+    break;
+
+  case sanatize_task_t::CANCEL_WAIT_FOR_RELEASE:
+    Serial.println("CANCEL_WAIT_FOR_RELEASE");
+    break;
+
+  case sanatize_task_t::COOL_DOWN:
+    Serial.println("COOL_DOWN");
+    break;
+  }
+}
+
+template<class T> struct watcher
+{
+  watcher(char const *const name_, T init) : name(name_), last_value(init)
+  {
+    print(init);
+  }
+
+  void operator()(T current_value)
+  {
+    if (last_value != current_value) {
+      print(current_value);
+      last_value = current_value;
+    }
+  }
+
+  void print(T current_value)
+  {
+    Serial.print(name);
+    Serial.print("=");
+    println(current_value);
+  }
+
+private:
+  T last_value;
+  char const *const name;
+};
+
+template<class T> watcher<T> make_watcher(char const *const name, T init)
+{
+  return watcher<T>(name, init);
+}
+#endif
+
 void setup()
 {
+#ifdef DEBUG
+  Serial.begin(115200);
+  println("Boot up");
+#endif
+
   pinMode(UV, OUTPUT);
   pinMode(LED, OUTPUT);
   pinMode(LED_Cathode, OUTPUT);
@@ -63,11 +134,33 @@ void setup()
   digitalWrite(UV, LOW);
   digitalWrite(LED_Cathode, LOW);
   digitalWrite(Push_Low, LOW);
+
+  if (!check_initial_conditions()) {
+#ifdef DEBUG
+    println(
+      "ERROR: Initial conditions not met. Please check wiring and reboot.");
+#endif
+    error_state();
+  }
 }
 
-bool read_button() { return digitalRead(Push) == HIGH; }
+bool read_button() { return digitalRead(Push) == LOW; }
+
+bool check_initial_conditions() { return read_button() == false; }
 
 void set_uv(bool active) { digitalWrite(UV, active ? HIGH : LOW); }
+
+void set_led(bool active) { digitalWrite(LED, active ? HIGH : LOW); }
+
+void error_state()
+{
+  for (;;) {
+    set_led(true);
+    delay(flash_delay);
+    set_led(false);
+    delay(flash_delay);
+  }
+}
 
 void loop()
 {
@@ -76,4 +169,18 @@ void loop()
   bool debounced_button_state = debounce(button_state, current_time);
   bool uv_active = sanatize(debounced_button_state, current_time);
   set_uv(uv_active);
+  set_led(uv_active);
+
+#ifdef DEBUG
+  auto static button_state_w = make_watcher("button_state", button_state);
+  button_state_w(button_state);
+  auto static debounced_button_state_w =
+    make_watcher("debounced_button_state", debounced_button_state);
+  debounced_button_state_w(debounced_button_state);
+  auto static uv_active_w = make_watcher("uv_active", uv_active);
+  uv_active_w(uv_active);
+  auto static sanatize_state_w =
+    make_watcher("sanatize_state", sanatize.get_state());
+  sanatize_state_w(sanatize.get_state());
+#endif
 }

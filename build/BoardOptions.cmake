@@ -69,8 +69,8 @@ set(ARDUINO_AVR_DIECIMILA_MENU_CPU_ATMEGA328 TRUE) # ATmega328P
 #==============================================================================
 
 # Option: Processor
-set(ARDUINO_AVR_NANO_MENU_CPU_ATMEGA328 TRUE) # ATmega328P
-# set(ARDUINO_AVR_NANO_MENU_CPU_ATMEGA328OLD TRUE) # ATmega328P (Old Bootloader)
+# set(ARDUINO_AVR_NANO_MENU_CPU_ATMEGA328 TRUE) # ATmega328P
+set(ARDUINO_AVR_NANO_MENU_CPU_ATMEGA328OLD TRUE) # ATmega328P (Old Bootloader)
 # set(ARDUINO_AVR_NANO_MENU_CPU_ATMEGA168 TRUE) # ATmega168
 
 #==============================================================================
