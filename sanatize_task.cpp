@@ -20,9 +20,7 @@ bool sanatize_task_t::operator()(bool input, unsigned long current_time)
     break;
 
   case SANATIZE:
-    if (input) {
-      state = CANCEL_WAIT_FOR_RELEASE;
-    } else if (current_time - sanatize_start_time >= sanatize_time) {
+    if (input || current_time - sanatize_start_time >= sanatize_time) {
       state = CANCEL_WAIT_FOR_RELEASE;
     }
     break;
@@ -41,3 +39,5 @@ bool sanatize_task_t::operator()(bool input, unsigned long current_time)
 
   return state == SANATIZE;
 }
+
+sanatize_task_t::state_t sanatize_task_t::get_state() const { return state; }

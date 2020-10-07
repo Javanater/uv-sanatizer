@@ -15,6 +15,8 @@ struct sanatize_task_t
 
   bool operator()(bool input, unsigned long current_time);
 
+  state_t get_state() const;
+
 private:
   state_t state{ IDLE };
   long long const sanatize_time;

@@ -9,6 +9,8 @@ struct debounce_task_t
 
   bool operator()(bool active, unsigned long current_time);
 
+  state_t get_state() const;
+
 private:
   state_t state{ INACTIVE };
   long long const debounce_time;
