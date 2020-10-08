@@ -18,4 +18,5 @@ private:
   long long sanatize_start_time{ 0 };
 };
 
+char const *to_string(sanatize_task_t::state_t state);
 #endif

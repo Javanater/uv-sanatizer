@@ -31,3 +31,17 @@ bool sanatize_task_t::operator()(bool input, unsigned long current_time)
 }
 
 sanatize_task_t::state_t sanatize_task_t::get_state() const { return state; }
+
+char const *to_string(sanatize_task_t::state_t state)
+{
+  switch (state) {
+  case sanatize_task_t::IDLE:
+    return "IDLE";
+
+  case sanatize_task_t::SANATIZE:
+    return "SANATIZE";
+
+  case sanatize_task_t::COOL_DOWN:
+    return "COOL_DOWN";
+  }
+}

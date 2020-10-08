@@ -65,19 +65,7 @@ template<class T> void println(T t) { Serial.println(t); }
 
 template<> void println<sanatize_task_t::state_t>(sanatize_task_t::state_t t)
 {
-  switch (t) {
-  case sanatize_task_t::IDLE:
-    Serial.println("IDLE");
-    break;
-
-  case sanatize_task_t::SANATIZE:
-    Serial.println("SANATIZE");
-    break;
-
-  case sanatize_task_t::COOL_DOWN:
-    Serial.println("COOL_DOWN");
-    break;
-  }
+  Serial.println(to_string(t));
 }
 
 template<class T> struct watcher
