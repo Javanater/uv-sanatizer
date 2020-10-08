@@ -20,6 +20,7 @@
 
 #include <Arduino.h>
 #include "debounce_task.hpp"
+#include "rising_edge_task.hpp"
 #include "sanatize_task.hpp"
 
 #define DEBUG
@@ -53,6 +54,7 @@ const auto sanatize_delay = 1000;
 const auto power_on_delay = 1000;
 
 debounce_task_t debounce{ debounce_delay };
+rising_edge_task_t rising_edge;
 sanatize_task_t sanatize{ CookTime, cancel_lockout_time };
 
 void error_state();
@@ -167,7 +169,8 @@ void loop()
   auto current_time = millis();
   bool button_state = read_button();
   bool debounced_button_state = debounce(button_state, current_time);
-  bool uv_active = sanatize(debounced_button_state, current_time);
+  bool rising_edge_state = rising_edge(debounced_button_state);
+  bool uv_active = sanatize(rising_edge_state, current_time);
   set_uv(uv_active);
   set_led(uv_active);
 
@@ -177,6 +180,9 @@ void loop()
   auto static debounced_button_state_w =
     make_watcher("debounced_button_state", debounced_button_state);
   debounced_button_state_w(debounced_button_state);
+  auto static rising_edge_state_w =
+    make_watcher("rising_edge_state", rising_edge_state);
+  rising_edge_state_w(rising_edge_state);
   auto static uv_active_w = make_watcher("uv_active", uv_active);
   uv_active_w(uv_active);
   auto static sanatize_state_w =

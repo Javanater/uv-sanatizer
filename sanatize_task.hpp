@@ -3,13 +3,7 @@
 
 struct sanatize_task_t
 {
-  enum state_t {
-    IDLE,
-    IDLE_WAIT_FOR_RELEASE,
-    SANATIZE,
-    CANCEL_WAIT_FOR_RELEASE,
-    COOL_DOWN
-  };
+  enum state_t { IDLE, SANATIZE, COOL_DOWN };
 
   sanatize_task_t(long long sanatize_time_, long long cool_down_time_);
 

@@ -9,11 +9,7 @@ bool sanatize_task_t::operator()(bool input, unsigned long current_time)
 {
   switch (state) {
   case IDLE:
-    if (input) { state = IDLE_WAIT_FOR_RELEASE; }
-    break;
-
-  case IDLE_WAIT_FOR_RELEASE:
-    if (!input) {
+    if (input) {
       state = SANATIZE;
       sanatize_start_time = current_time;
     }
@@ -21,12 +17,6 @@ bool sanatize_task_t::operator()(bool input, unsigned long current_time)
 
   case SANATIZE:
     if (input || current_time - sanatize_start_time >= sanatize_time) {
-      state = CANCEL_WAIT_FOR_RELEASE;
-    }
-    break;
-
-  case CANCEL_WAIT_FOR_RELEASE:
-    if (!input) {
       state = COOL_DOWN;
       sanatize_start_time = current_time;
     }
