@@ -23,7 +23,15 @@
 #include "rising_edge_task.hpp"
 #include "sanatize_task.hpp"
 
-#define DEBUG
+#define SerialDebug Serial
+#include "debugging.hpp"
+
+#ifdef SerialDebug
+template<> void println<sanatize_task_t::state_t>(sanatize_task_t::state_t t)
+{
+  SerialDebug.println(to_string(t));
+}
+#endif
 
 // this sets the number of seconds the UV tubes will be on for a sanitize cycle
 const auto CookTime = 210000;
@@ -57,75 +65,6 @@ debounce_task_t debounce{ debounce_delay };
 rising_edge_task_t rising_edge;
 sanatize_task_t sanatize{ CookTime, cancel_lockout_time };
 
-void error_state();
-bool check_initial_conditions();
-
-#ifdef DEBUG
-template<class T> void println(T t) { Serial.println(t); }
-
-template<> void println<sanatize_task_t::state_t>(sanatize_task_t::state_t t)
-{
-  Serial.println(to_string(t));
-}
-
-template<class T> struct watcher
-{
-  watcher(char const *const name_, T init) : name(name_), last_value(init)
-  {
-    print(init);
-  }
-
-  void operator()(T current_value)
-  {
-    if (last_value != current_value) {
-      print(current_value);
-      last_value = current_value;
-    }
-  }
-
-  void print(T current_value)
-  {
-    Serial.print(name);
-    Serial.print("=");
-    println(current_value);
-  }
-
-private:
-  T last_value;
-  char const *const name;
-};
-
-template<class T> watcher<T> make_watcher(char const *const name, T init)
-{
-  return watcher<T>(name, init);
-}
-#endif
-
-void setup()
-{
-#ifdef DEBUG
-  Serial.begin(115200);
-  println("Boot up");
-#endif
-
-  pinMode(UV, OUTPUT);
-  pinMode(LED, OUTPUT);
-  pinMode(LED_Cathode, OUTPUT);
-  pinMode(Push, INPUT_PULLUP);
-  pinMode(Push_Low, OUTPUT);
-  digitalWrite(UV, LOW);
-  digitalWrite(LED_Cathode, LOW);
-  digitalWrite(Push_Low, LOW);
-
-  if (!check_initial_conditions()) {
-#ifdef DEBUG
-    println(
-      "ERROR: Initial conditions not met. Please check wiring and reboot.");
-#endif
-    error_state();
-  }
-}
-
 bool read_button() { return digitalRead(Push) == LOW; }
 
 bool check_initial_conditions() { return read_button() == false; }
@@ -144,6 +83,31 @@ void error_state()
   }
 }
 
+void setup()
+{
+#ifdef SerialDebug
+  SerialDebug.begin(115200);
+  println("Boot up");
+#endif
+
+  pinMode(UV, OUTPUT);
+  pinMode(LED, OUTPUT);
+  pinMode(LED_Cathode, OUTPUT);
+  pinMode(Push, INPUT_PULLUP);
+  pinMode(Push_Low, OUTPUT);
+  digitalWrite(UV, LOW);
+  digitalWrite(LED_Cathode, LOW);
+  digitalWrite(Push_Low, LOW);
+
+  if (!check_initial_conditions()) {
+#ifdef SerialDebug
+    println(
+      "ERROR: Initial conditions not met. Please check wiring and reboot.");
+#endif
+    error_state();
+  }
+}
+
 void loop()
 {
   auto current_time = millis();
@@ -154,7 +118,7 @@ void loop()
   set_uv(uv_active);
   set_led(uv_active);
 
-#ifdef DEBUG
+#ifdef SerialDebug
   auto static button_state_w = make_watcher("button_state", button_state);
   button_state_w(button_state);
   auto static debounced_button_state_w =

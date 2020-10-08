@@ -8,6 +8,7 @@ add_executable(uv-sanatizer
 uv-sanatizer.cpp
 debounce_task.cpp
 debounce_task.hpp
+debugging.hpp
 sanatize_task.cpp
 sanatize_task.hpp
 rising_edge_task.cpp
