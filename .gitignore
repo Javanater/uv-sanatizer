@@ -3,3 +3,4 @@ build/
 !build/BoardOptions.cmake
 .clangd/
 compile_commands.json
+.vscode/

@@ -8,4 +8,5 @@ bool rising_edge_task_t::operator()(bool active)
   }
 
   last_active = active;
+  return false;
 }
