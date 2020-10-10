@@ -2,8 +2,6 @@
 
 // Program to control UV-C germicidal lamps in disinfection chamber
 // Single button interface with LED lighted push-button
-// Upon powerup blink LED button 3 quick times to indicate box is initialized
-// and ready to use
 // After initialize LED is off and waiting in a forever while for Push to go
 // low then high
 // indicating the button is pressed and released
@@ -34,44 +32,38 @@ template<> void println<sanatize_task_t::state_t>(sanatize_task_t::state_t t)
 #endif
 
 // this sets the number of seconds the UV tubes will be on for a sanitize cycle
-const auto CookTime = 210000;
+const auto cook_time = 210000;
 
 // this goes high to power relay to turn on UV tubes
-const auto UV = 2;
+const auto uv_pin = 2;
 
 // this goes high to power LED
-const auto LED = 3;
+const auto led_pin = 3;
 
 // set this low for the cathode of the LED
-const auto LED_Cathode = 4;
+const auto led_cathode = 4;
 
 // this is held high by pullup until button pressed then pulled low by pin 6
-const auto Push = 5;
+const auto button_pin = 5;
 
 // this is the low side of the push button switch
-const auto Push_Low = 6;
+const auto button_gnd = 6;
 
 const auto flash_delay = 50;
-const auto blink_count = 10;
-const auto power_on_blink_count = 3;
 const auto debounce_delay = 50;
 const auto cancel_lockout_time = 5000;
-const auto cook_sample_frequency = 10;
-const auto cook_sample_delay = 1000 / 10;
-const auto sanatize_delay = 1000;
-const auto power_on_delay = 1000;
 
 debounce_task_t debounce{ debounce_delay };
 rising_edge_task_t rising_edge;
-sanatize_task_t sanatize{ CookTime, cancel_lockout_time };
+sanatize_task_t sanatize{ cook_time, cancel_lockout_time };
 
-bool read_button() { return digitalRead(Push) == LOW; }
+bool read_button() { return digitalRead(button_pin) == LOW; }
 
 bool check_initial_conditions() { return read_button() == false; }
 
-void set_uv(bool active) { digitalWrite(UV, active ? HIGH : LOW); }
+void set_uv(bool active) { digitalWrite(uv_pin, active ? HIGH : LOW); }
 
-void set_led(bool active) { digitalWrite(LED, active ? HIGH : LOW); }
+void set_led(bool active) { digitalWrite(led_pin, active ? HIGH : LOW); }
 
 void error_state()
 {
@@ -85,25 +77,21 @@ void error_state()
 
 void setup()
 {
-#ifdef SerialDebug
-  SerialDebug.begin(115200);
+  debug_init();
   println("Boot up");
-#endif
 
-  pinMode(UV, OUTPUT);
-  pinMode(LED, OUTPUT);
-  pinMode(LED_Cathode, OUTPUT);
-  pinMode(Push, INPUT_PULLUP);
-  pinMode(Push_Low, OUTPUT);
-  digitalWrite(UV, LOW);
-  digitalWrite(LED_Cathode, LOW);
-  digitalWrite(Push_Low, LOW);
+  pinMode(uv_pin, OUTPUT);
+  pinMode(led_pin, OUTPUT);
+  pinMode(led_cathode, OUTPUT);
+  pinMode(button_pin, INPUT_PULLUP);
+  pinMode(button_gnd, OUTPUT);
+  digitalWrite(uv_pin, LOW);
+  digitalWrite(led_cathode, LOW);
+  digitalWrite(button_gnd, LOW);
 
   if (!check_initial_conditions()) {
-#ifdef SerialDebug
     println(
       "ERROR: Initial conditions not met. Please check wiring and reboot.");
-#endif
     error_state();
   }
 }
@@ -118,19 +106,9 @@ void loop()
   set_uv(uv_active);
   set_led(uv_active);
 
-#ifdef SerialDebug
-  auto static button_state_w = make_watcher("button_state", button_state);
-  button_state_w(button_state);
-  auto static debounced_button_state_w =
-    make_watcher("debounced_button_state", debounced_button_state);
-  debounced_button_state_w(debounced_button_state);
-  auto static rising_edge_state_w =
-    make_watcher("rising_edge_state", rising_edge_state);
-  rising_edge_state_w(rising_edge_state);
-  auto static uv_active_w = make_watcher("uv_active", uv_active);
-  uv_active_w(uv_active);
-  auto static sanatize_state_w =
-    make_watcher("sanatize_state", sanatize.get_state());
-  sanatize_state_w(sanatize.get_state());
-#endif
+  WATCH(button_state);
+  WATCH(debounced_button_state);
+  WATCH(rising_edge_state);
+  WATCH(uv_active);
+  WATCH(sanatize.get_state());
 }

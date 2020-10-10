@@ -2,6 +2,8 @@
 #define __DEBUGGING_HPP__
 
 #ifdef SerialDebug
+inline void debug_init() { SerialDebug.begin(115200); }
+
 template<class T> void println(T t) { SerialDebug.println(t); }
 
 template<class T> struct watcher
@@ -35,6 +37,21 @@ template<class T> watcher<T> make_watcher(char const *const name, T init)
 {
   return watcher<T>(name, init);
 }
+
+#define WATCH(x)                               \
+  {                                            \
+    auto static watcher = make_watcher(#x, x); \
+    watcher(x);                                \
+  }
+
+#else
+
+inline void debug_init() {}
+
+template<class T> void println(T t) {}
+
+#define WATCH(x) ((void)0);
+
 #endif
 
 #endif
