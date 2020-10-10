@@ -1,11 +1,11 @@
 #include "sanatize_task.hpp"
 
-sanatize_task_t::sanatize_task_t(long long const sanatize_time_,
-  long long const cool_down_time_)
+sanatize_task_t::sanatize_task_t(duration_t const sanatize_time_,
+  duration_t const cool_down_time_)
   : sanatize_time(sanatize_time_), cool_down_time(cool_down_time_)
 {}
 
-bool sanatize_task_t::operator()(bool input, unsigned long current_time)
+bool sanatize_task_t::operator()(bool input, timepoint_t current_time)
 {
   switch (state) {
   case IDLE:

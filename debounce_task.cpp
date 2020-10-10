@@ -1,6 +1,5 @@
 #include "debounce_task.hpp"
 
-
 debounce_task_t::debounce_task_t(long long debounce_time_)
   : debounce_time(debounce_time_)
 {}
