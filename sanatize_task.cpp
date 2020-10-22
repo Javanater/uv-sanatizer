@@ -30,8 +30,10 @@ bool sanatize_task_t::operator()(bool input, timepoint_t current_time)
   return state == SANATIZE;
 }
 
+// cppcheck-suppress unusedFunction symbolName=get_state
 sanatize_task_t::state_t sanatize_task_t::get_state() const { return state; }
 
+// cppcheck-suppress unusedFunction symbolName=to_string
 char const *to_string(sanatize_task_t::state_t state)
 {
   switch (state) {

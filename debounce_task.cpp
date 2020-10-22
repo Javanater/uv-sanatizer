@@ -41,4 +41,5 @@ bool debounce_task_t::operator()(bool active, unsigned long current_time)
   return state == ACTIVE || state == DEBOUCE_ACTIVE;
 }
 
+// cppcheck-suppress unusedFunction symbolName=get_state
 debounce_task_t::state_t debounce_task_t::get_state() const { return state; }

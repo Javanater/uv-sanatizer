@@ -14,7 +14,7 @@ struct debounce_task_t
 private:
   state_t state{ INACTIVE };
   long long const debounce_time;
-  long long last_transition_time{ 0 };
+  unsigned long last_transition_time{ 0 };
 };
 
 #endif
